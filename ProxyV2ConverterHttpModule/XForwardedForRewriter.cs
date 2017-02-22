@@ -23,9 +23,13 @@ namespace ProxyV2ConverterHttpModule
             context.BeginRequest += Context_BeginRequest;
         }
 
+        public Func<object, HttpRequestBase> GetRequest = (object sender) => {
+            return new HttpRequestWrapper(((HttpApplication)sender).Context.Request);
+        };
+
         public void Context_BeginRequest(object sender, EventArgs e)
         {
-            var request = ((HttpApplication)sender).Context.Request;
+            var request = GetRequest(sender);
 
             var proxyv2header = request.BinaryRead(12);
             if (!proxyv2header.SequenceEqual(proxyv2HeaderStartRequence))
@@ -43,21 +47,18 @@ namespace ProxyV2ConverterHttpModule
                 Type hdr = headers.GetType();
                 PropertyInfo ro = hdr.GetProperty("IsReadOnly",
                     BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.IgnoreCase | BindingFlags.FlattenHierarchy);
-                // Remove the ReadOnly property
+
                 ro.SetValue(headers, false, null);
-                // Invoke the protected InvalidateCachedArrays method 
+
                 hdr.InvokeMember("InvalidateCachedArrays",
                     BindingFlags.InvokeMethod | BindingFlags.NonPublic | BindingFlags.Instance,
                     null, headers, null);
-                // Now invoke the protected "BaseAdd" method of the base class to add the
-                // headers you need. The header content needs to be an ArrayList or the
-                // the web application will choke on it.
+
                 hdr.InvokeMember("BaseAdd",
                     BindingFlags.InvokeMethod | BindingFlags.NonPublic | BindingFlags.Instance,
                     null, headers,
                     new object[] { "X-Forwarded-For", new ArrayList { ip } });
-                // repeat BaseAdd invocation for any other headers to be added
-                // Then set the collection back to ReadOnly
+
                 ro.SetValue(headers, true, null);
             }
         }
