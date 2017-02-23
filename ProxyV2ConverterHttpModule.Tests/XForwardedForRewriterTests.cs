@@ -63,7 +63,38 @@ namespace ProxyV2ConverterHttpModule.Tests
             var xForwardedFor = headers["X-Forwarded-For"];
             Assert.AreEqual(xForwardedFor, "192.168.255.255");
         }
-    }
+        [Test]
+        public void Request_Should_Overwrite()
+        {
+            //Arrange
+            var request = Mock.Of<HttpRequestBase>();
 
-    public class FakeHttpApplication : HttpApplication { }
+            var mockRequest = Mock.Get(request);
+            //setup mocked request with desired behavior for test
+            var proxyv2HeaderStartRequence = new byte[12] { 0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A };
+            mockRequest
+                .Setup(m => m.BinaryRead(12))
+                .Returns(proxyv2HeaderStartRequence);
+            var ipaddress = Encoding.ASCII.GetBytes("192168255255-");
+            mockRequest
+                .Setup(m => m.BinaryRead(13))
+                .Returns(ipaddress);
+            var fakeProxyv2IpvType = new byte[5] { 0x00, 0x12, 0x00, 0x00, 0x00 };
+            mockRequest
+                .Setup(m => m.BinaryRead(5))
+                .Returns(fakeProxyv2IpvType);
+
+            var headers = new NameValueCollection { { "X-Forwarded-For", "123.132.132.123" } };
+            mockRequest.Setup(m => m.Headers).Returns(headers);
+
+            var sut = new XForwardedForRewriter();
+
+            sut.GetRequest = (object sender) => request;
+
+            sut.Context_BeginRequest(new object(), EventArgs.Empty);
+
+            var xForwardedFor = headers["X-Forwarded-For"];
+            Assert.AreEqual(xForwardedFor, "123.132.132.123,192.168.255.255");
+        }
+    }
 }

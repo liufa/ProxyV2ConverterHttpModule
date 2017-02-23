@@ -22,7 +22,8 @@ namespace ProxyV2ConverterHttpModule
             context.BeginRequest += Context_BeginRequest;
         }
 
-        public Func<object, HttpRequestBase> GetRequest = (object sender) => {
+        public Func<object, HttpRequestBase> GetRequest = (object sender) =>
+        {
             return new HttpRequestWrapper(((HttpApplication)sender).Context.Request);
         };
 
@@ -41,14 +42,18 @@ namespace ProxyV2ConverterHttpModule
                 var isIpv4 = new byte[] { 0x11, 0x12 }.Contains(proxyv2IpvType);
                 var ipInBinary = isIpv4 ? request.BinaryRead(13).Take(12).ToArray() : request.BinaryRead(36);
                 var ip = Encoding.UTF8.GetString(ipInBinary);
-
+                var aggregatedIp = Regex.Replace(ip, ".{3}", "$0.").TrimEnd(new[] { '.' });
+                var currentXForwardedFor = string.Empty;
                 var headers = request.Headers;
+                if (headers.Get("X-Forwarded-For") != null)
+                    currentXForwardedFor = headers["X-Forwarded-For"];
                 Type hdr = headers.GetType();
                 PropertyInfo ro = hdr.GetProperty("IsReadOnly",
                     BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.IgnoreCase | BindingFlags.FlattenHierarchy);
 
                 ro.SetValue(headers, false, null);
 
+                request.Headers.Remove("X-Forwarded-For");
                 hdr.InvokeMember("InvalidateCachedArrays",
                     BindingFlags.InvokeMethod | BindingFlags.NonPublic | BindingFlags.Instance,
                     null, headers, null);
@@ -56,7 +61,7 @@ namespace ProxyV2ConverterHttpModule
                 hdr.InvokeMember("BaseAdd",
                     BindingFlags.InvokeMethod | BindingFlags.NonPublic | BindingFlags.Instance,
                     null, headers,
-                    new object[] { "X-Forwarded-For", new ArrayList { Regex.Replace(ip, ".{3}", "$0.").TrimEnd(new[] {'.'}) } });
+                    new object[] { "X-Forwarded-For", new ArrayList { !string.IsNullOrEmpty(currentXForwardedFor) ? $"{currentXForwardedFor},{aggregatedIp}" : aggregatedIp } });
 
                 ro.SetValue(headers, true, null);
             }
