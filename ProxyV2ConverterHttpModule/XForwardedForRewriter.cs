@@ -15,7 +15,7 @@ namespace ProxyV2ConverterHttpModule
             throw new NotImplementedException();
         }
 
-        byte[] proxyv2HeaderStartRequence = new byte[12] { 0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A };
+        byte[] proxyv2HeaderStartRequence = new byte[13] { 0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A , 0x02 };
 
         public void Init(HttpApplication context)
         {
@@ -31,7 +31,7 @@ namespace ProxyV2ConverterHttpModule
         {
             var request = GetRequest(sender);
 
-            var proxyv2header = request.BinaryRead(12);
+            var proxyv2header = request.BinaryRead(13);
             if (!proxyv2header.SequenceEqual(proxyv2HeaderStartRequence))
             {
                 request.Abort();
@@ -41,7 +41,7 @@ namespace ProxyV2ConverterHttpModule
                 var proxyv2IpvType = request.BinaryRead(5).Skip(1).Take(1).Single();
                 var isIpv4 = new byte[] { 0x11, 0x12 }.Contains(proxyv2IpvType);
                 var ip = isIpv4 ? 
-                    Regex.Replace(Encoding.ASCII.GetString(request.BinaryRead(13).Take(12).ToArray()), ".{3}", "$0.").TrimEnd(new[] { '.' }) : 
+                    Regex.Replace(Encoding.ASCII.GetString(request.BinaryRead(12)), ".{3}", "$0.").TrimEnd(new[] { '.' }) : 
                     Encoding.ASCII.GetString(request.BinaryRead(36));
 
                 var currentXForwardedFor = string.Empty;

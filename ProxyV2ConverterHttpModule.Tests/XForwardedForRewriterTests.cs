@@ -38,13 +38,13 @@ namespace ProxyV2ConverterHttpModule.Tests
 
             var mockRequest = Mock.Get(request);
             //setup mocked request with desired behavior for test
-            var proxyv2HeaderStartRequence = new byte[12] { 0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A };
-            mockRequest
-                .Setup(m => m.BinaryRead(12))
-                .Returns(proxyv2HeaderStartRequence);
-            var ipaddress = Encoding.ASCII.GetBytes("192168255255-");
+            var proxyv2HeaderStartRequence = new byte[13] { 0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A, 0x02 };
             mockRequest
                 .Setup(m => m.BinaryRead(13))
+                .Returns(proxyv2HeaderStartRequence);
+            var ipaddress = Encoding.ASCII.GetBytes("192168255255");
+            mockRequest
+                .Setup(m => m.BinaryRead(12))
                 .Returns(ipaddress);
             var fakeProxyv2IpvType = new byte[5] { 0x00, 0x12, 0x00, 0x00, 0x00 };
             mockRequest
@@ -71,13 +71,13 @@ namespace ProxyV2ConverterHttpModule.Tests
 
             var mockRequest = Mock.Get(request);
             //setup mocked request with desired behavior for test
-            var proxyv2HeaderStartRequence = new byte[12] { 0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A };
-            mockRequest
-                .Setup(m => m.BinaryRead(12))
-                .Returns(proxyv2HeaderStartRequence);
-            var ipaddress = Encoding.ASCII.GetBytes("192168255255-");
+            var proxyv2HeaderStartRequence = new byte[13] { 0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A, 0x02 };
             mockRequest
                 .Setup(m => m.BinaryRead(13))
+                .Returns(proxyv2HeaderStartRequence);
+            var ipaddress = Encoding.ASCII.GetBytes("192168255255");
+            mockRequest
+                .Setup(m => m.BinaryRead(12))
                 .Returns(ipaddress);
             var fakeProxyv2IpvType = new byte[5] { 0x00, 0x12, 0x00, 0x00, 0x00 };
             mockRequest
@@ -105,9 +105,9 @@ namespace ProxyV2ConverterHttpModule.Tests
 
             var mockRequest = Mock.Get(request);
             //setup mocked request with desired behavior for test
-            var proxyv2HeaderStartRequence = new byte[12] { 0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A };
+            var proxyv2HeaderStartRequence = new byte[13] { 0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A, 0x02 };
             mockRequest
-                .Setup(m => m.BinaryRead(12))
+                .Setup(m => m.BinaryRead(13))
                 .Returns(proxyv2HeaderStartRequence);
             var ipaddress = Encoding.ASCII.GetBytes("2a01:e35:aaa4:6860:a5e7:5ba9:965e:cc93");
             mockRequest
