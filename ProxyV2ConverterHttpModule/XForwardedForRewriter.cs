@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 using System.Web;
 
 namespace ProxyV2ConverterHttpModule
@@ -40,8 +39,8 @@ namespace ProxyV2ConverterHttpModule
             {
                 var proxyv2IpvType = request.BinaryRead(5).Skip(1).Take(1).Single();
                 var isIpv4 = new byte[] { 0x11, 0x12 }.Contains(proxyv2IpvType);
-                var ipInBinary = isIpv4 ? request.BinaryRead(12) : request.BinaryRead(36);
-                var ip = Convert.ToString(ipInBinary);
+                var ipInBinary = isIpv4 ? request.BinaryRead(13).Take(12).ToArray() : request.BinaryRead(36);
+                var ip = Encoding.UTF8.GetString(ipInBinary);
 
                 var headers = request.Headers;
                 Type hdr = headers.GetType();
@@ -57,7 +56,7 @@ namespace ProxyV2ConverterHttpModule
                 hdr.InvokeMember("BaseAdd",
                     BindingFlags.InvokeMethod | BindingFlags.NonPublic | BindingFlags.Instance,
                     null, headers,
-                    new object[] { "X-Forwarded-For", new ArrayList { ip } });
+                    new object[] { "X-Forwarded-For", new ArrayList { Regex.Replace(ip, ".{3}", "$0.").TrimEnd(new[] {'.'}) } });
 
                 ro.SetValue(headers, true, null);
             }

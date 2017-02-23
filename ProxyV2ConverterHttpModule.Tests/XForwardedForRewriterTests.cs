@@ -1,13 +1,8 @@
 ﻿using Moq;
 using NUnit.Framework;
 using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.ComponentModel;
-using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Web;
 
 namespace ProxyV2ConverterHttpModule.Tests
@@ -15,7 +10,7 @@ namespace ProxyV2ConverterHttpModule.Tests
     [TestFixture]
     public class XForwardedForRewriterTests
     {
-       
+
         [Test]
         public void Request_Should_Abort()
         {
@@ -47,7 +42,10 @@ namespace ProxyV2ConverterHttpModule.Tests
             mockRequest
                 .Setup(m => m.BinaryRead(12))
                 .Returns(proxyv2HeaderStartRequence);
-
+            var ipaddress = Encoding.ASCII.GetBytes("192168255255-");
+            mockRequest
+                .Setup(m => m.BinaryRead(13))
+                .Returns(ipaddress);
             var fakeProxyv2IpvType = new byte[5] { 0x00, 0x12, 0x00, 0x00, 0x00 };
             mockRequest
                 .Setup(m => m.BinaryRead(5))
@@ -57,16 +55,13 @@ namespace ProxyV2ConverterHttpModule.Tests
             mockRequest.Setup(m => m.Headers).Returns(headers);
 
             var sut = new XForwardedForRewriter();
-            //replace with mock request for test
+
             sut.GetRequest = (object sender) => request;
 
-            //Act
             sut.Context_BeginRequest(new object(), EventArgs.Empty);
 
-            //Assert
-            //...check request headers
             var xForwardedFor = headers["X-Forwarded-For"];
-            Assert.IsNotNull(xForwardedFor);
+            Assert.AreEqual(xForwardedFor, "192.168.255.255");
         }
     }
 
