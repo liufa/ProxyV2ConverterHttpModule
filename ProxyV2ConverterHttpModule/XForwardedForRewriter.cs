@@ -202,7 +202,7 @@ namespace ProxyV2ConverterHttpModule
                 var proxyv2IpvType = proxyv2IpvHeaderInBinary[0];
                 var isIpv4 = new byte[] { 0x11, 0x12 }.Contains(proxyv2IpvType);
                 var ip = isIpv4 ? 
-                    Regex.Replace(Encoding.ASCII.GetString(proxyv2IpvHeaderInBinary.Skip(3).Take(4).ToArray()), ".{3}", "$0.").TrimEnd(new[] { '.' }) : 
+                    $"{proxyv2IpvHeaderInBinary[3]}.{proxyv2IpvHeaderInBinary[4]}.{proxyv2IpvHeaderInBinary[5]}.{proxyv2IpvHeaderInBinary[6]}": 
                     Encoding.ASCII.GetString(proxyv2IpvHeaderInBinary.Skip(3).Take(18).ToArray());
 
                 var currentXForwardedFor = string.Empty;
