@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace ConsoleApplication1
@@ -25,6 +26,7 @@ namespace ConsoleApplication1
 
                 Console.WriteLine("Starting TCP listener...");
 
+
                 TcpListener listener = new TcpListener(ipAddress, 500);
 
                 listener.Start();
@@ -38,43 +40,61 @@ namespace ConsoleApplication1
                     Socket socket = listener.AcceptSocket();
 
                     Console.WriteLine("Connection accepted.");
-                    var getOrPostHttp1 = new byte[1];
-                    while (getOrPostHttp1[0] != 10)
-                        socket.Receive(getOrPostHttp1);
-                    byte[] proxyv2headerIdentifier = new byte[13];
-                    socket.Receive(proxyv2headerIdentifier);
-                    var proxyv2header = new List<byte>();
-                    var proxyv2HeaderBuffer = new byte[1];
-                    if (proxyv2headerIdentifier.SequenceEqual(proxyv2HeaderStartRequence))
+
+
+                    var childSocketThread = new Thread(() =>
                     {
-                        while (proxyv2HeaderBuffer[0] != 10)
+
+                        var getOrPostHttp1Acc = new List<byte>();
+                        var getOrPostHttp1 = new byte[1];
+                        while (getOrPostHttp1[0] != 10)
                         {
-                            socket.Receive(proxyv2HeaderBuffer);
-                            proxyv2header.Add(proxyv2HeaderBuffer[0]);
+                            socket.Receive(getOrPostHttp1);
+                            getOrPostHttp1Acc.Add(getOrPostHttp1[0]);
+                        }
+                        bool isGet = Encoding.ASCII.GetString(getOrPostHttp1Acc.ToArray()).ToUpper().Contains("GET");
+                        byte[] proxyv2headerIdentifier = new byte[13];
+                        socket.Receive(proxyv2headerIdentifier);
+                        var proxyv2header = new List<byte>();
+                        var proxyv2HeaderBuffer = new byte[1];
+                        if (proxyv2headerIdentifier.SequenceEqual(proxyv2HeaderStartRequence))
+                        {
+                            while (proxyv2HeaderBuffer[0] != 10)
+                            {
+                                socket.Receive(proxyv2HeaderBuffer);
+                                proxyv2header.Add(proxyv2HeaderBuffer[0]);
+                            }
+
+                            string headerString = $"proxyv2:{Encoding.ASCII.GetString(proxyv2header.ToArray())}";
+                            byte[] bodyBuff = new byte[0];
+                            byte[] buffer = new byte[1];
+                            int contentLength = 0;
+                            while (!headerString.Contains("\r\n\r\n"))
+                            {
+                                socket.Receive(buffer, 0, 1, 0);
+                                headerString += Encoding.ASCII.GetString(buffer);
+                            }
+                            var body = string.Empty;
+                            if (!isGet)
+                            {
+                                Regex reg = new Regex("\\\r\nContent-Length: (.*?)\\\r\n");
+                                Match m = reg.Match(headerString);
+                                contentLength = int.Parse(m.Groups[1].ToString());
+                                bodyBuff = new byte[contentLength];
+                                socket.Receive(bodyBuff, 0, contentLength, 0);
+                                body = Encoding.ASCII.GetString(bodyBuff);
+                            }
+
+                            RedirectRequest(contentLength, body, headerString, isGet);
                         }
 
-                        string headerString = $"proxyv2:{Encoding.ASCII.GetString(proxyv2header.ToArray())}";
-                        byte[] bodyBuff = new byte[0];
-                        byte[] buffer = new byte[1];
-                        int contentLength = 0;
-                        while (!headerString.Contains("\r\n\r\n"))
-                        {
-                            socket.Receive(buffer, 0, 1, 0);
-                            headerString += Encoding.ASCII.GetString(buffer);
-                        }
+                        Console.WriteLine();
 
-                        Regex reg = new Regex("\\\r\nContent-Length: (.*?)\\\r\n");
-                        Match m = reg.Match(headerString);
-                        contentLength = int.Parse(m.Groups[1].ToString());
-                        bodyBuff = new byte[contentLength];
-                        socket.Receive(bodyBuff, 0, contentLength, 0);
-                        string body = Encoding.ASCII.GetString(bodyBuff);
-                        RedirectRequest(contentLength, body, headerString, Encoding.ASCII.GetString(getOrPostHttp1).Contains("GET"));
-                    }
+                        socket.Close();
+                    });
 
-                    Console.WriteLine();
+                    childSocketThread.Start();
 
-                    socket.Close();
                 }
 
                 listener.Stop();
