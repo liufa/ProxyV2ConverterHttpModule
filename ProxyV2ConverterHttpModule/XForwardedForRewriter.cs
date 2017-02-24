@@ -54,9 +54,9 @@ namespace ProxyV2ConverterHttpModule
 
                 Console.WriteLine("Starting TCP listener...");
 
-                if (listener == null && PortIsAvailable(500))
+                if (listener == null && PortIsAvailable(80))
                 {
-                    listener = new TcpListener(ipAddress, 500);
+                    listener = new TcpListener(ipAddress, 80);
 
                     listener.Start();
 
@@ -139,7 +139,7 @@ namespace ProxyV2ConverterHttpModule
 
         public static void RedirectRequest(int length, string body, string headers, bool IsGet)
         {
-            var request = (HttpWebRequest)WebRequest.Create("http://localhost:53566/");
+            var request = (HttpWebRequest)WebRequest.Create("http://test-iis-teridion.rocks/");
             var headersAsKeyValuePairs = headers.Split(new[] { "\r\n" }, StringSplitOptions.None);
 
             foreach (var header in headersAsKeyValuePairs)
