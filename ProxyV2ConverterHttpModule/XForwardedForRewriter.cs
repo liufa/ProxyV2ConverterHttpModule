@@ -12,11 +12,9 @@ namespace ProxyV2ConverterHttpModule
     {
         public void Dispose()
         {
-            throw new NotImplementedException();
+          //  throw new NotImplementedException();
         }
-
-        byte[] proxyv2HeaderStartRequence = new byte[13] { 0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A , 0x02 };
-
+       
         public void Init(HttpApplication context)
         {
             context.BeginRequest += Context_BeginRequest;
@@ -30,9 +28,8 @@ namespace ProxyV2ConverterHttpModule
         public void Context_BeginRequest(object sender, EventArgs e)
         {
             var request = GetRequest(sender);
-
-            var proxyv2header = request.BinaryRead(13);
-            if (!proxyv2header.SequenceEqual(proxyv2HeaderStartRequence))
+            var proxyv2header = request.Headers.AllKeys.FirstOrDefault(o => o == "proxyv2");
+            if (proxyv2header == null)
             {
                 request.Abort();
             }
