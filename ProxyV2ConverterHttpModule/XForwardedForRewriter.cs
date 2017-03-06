@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -21,7 +21,7 @@ namespace ProxyV2ConverterHttpModule
         {
           //  throw new NotImplementedException();
         }
-        static byte[] proxyv2HeaderStartRequence = new byte[13] { 0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A, 0x02 };
+        static byte[] proxyv2HeaderStartRequence = new byte[12] { 0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A };
 
         bool PortIsAvailable(int port)
         {
@@ -54,9 +54,9 @@ namespace ProxyV2ConverterHttpModule
 
                 Console.WriteLine("Starting TCP listener...");
 
-                if (listener == null && PortIsAvailable(80))
+                if (listener == null && PortIsAvailable(444))
                 {
-                    listener = new TcpListener(ipAddress, 80);
+                    listener = new TcpListener(IPAddress.Any, 444);
 
                     listener.Start();
 
@@ -69,6 +69,7 @@ namespace ProxyV2ConverterHttpModule
 
                         Socket socket = listener.AcceptSocket();
 
+
                         Console.WriteLine("Connection accepted.");
 
 
@@ -76,18 +77,18 @@ namespace ProxyV2ConverterHttpModule
                         {
 
                             var getOrPostHttp1Acc = new List<byte>();
-                            var getOrPostHttp1 = new byte[1];
-                            while (getOrPostHttp1[0] != 10)
-                            {
-                                socket.Receive(getOrPostHttp1);
-                                getOrPostHttp1Acc.Add(getOrPostHttp1[0]);
-                            }
-                            bool isGet = Encoding.ASCII.GetString(getOrPostHttp1Acc.ToArray()).ToUpper().Contains("GET");
-                            byte[] proxyv2headerIdentifier = new byte[13];
+                          //  var getOrPostHttp1 = new byte[1];
+                            //while (getOrPostHttp1[0] != 10)
+                            //{
+                            //    socket.Receive(getOrPostHttp1);
+                            //    getOrPostHttp1Acc.Add(getOrPostHttp1[0]);
+                            //}
+                            bool isGet = true;// Encoding.ASCII.GetString(getOrPostHttp1Acc.ToArray()).ToUpper().Contains("GET");
+                            byte[] proxyv2headerIdentifier = new byte[12];
                             socket.Receive(proxyv2headerIdentifier);
                             var proxyv2header = new List<byte>();
                             var proxyv2HeaderBuffer = new byte[1];
-                            if (proxyv2headerIdentifier.SequenceEqual(proxyv2HeaderStartRequence))
+                            if (proxyv2headerIdentifier.SequenceEqual(proxyv2HeaderStartRequence))//TODO:uncomment this, hardcoded (true) is only for testing 
                             {
                                 while (proxyv2HeaderBuffer[0] != 10)
                                 {
@@ -99,7 +100,7 @@ namespace ProxyV2ConverterHttpModule
                                 byte[] bodyBuff = new byte[0];
                                 byte[] buffer = new byte[1];
                                 int contentLength = 0;
-                                while (!headerString.Contains("\r\n\r\n"))
+                                while (!headerString.Contains("\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0"))
                                 {
                                     socket.Receive(buffer, 0, 1, 0);
                                     headerString += Encoding.ASCII.GetString(buffer);
@@ -115,7 +116,7 @@ namespace ProxyV2ConverterHttpModule
                                     body = Encoding.ASCII.GetString(bodyBuff);
                                 }
 
-                                RedirectRequest(contentLength, body, headerString, isGet);
+                                RedirectRequest(contentLength, body, $"{proxyv2header[3]}.{proxyv2header[4]}.{proxyv2header[5]}.{proxyv2header[6]}", isGet);
                             }
 
                             Console.WriteLine();
@@ -137,17 +138,17 @@ namespace ProxyV2ConverterHttpModule
             }
         }
 
-        public static void RedirectRequest(int length, string body, string headers, bool IsGet)
+        public static void RedirectRequest(int length, string body, string header, bool IsGet)
         {
-            var request = (HttpWebRequest)WebRequest.Create("http://test-iis-teridion.rocks/");
-            var headersAsKeyValuePairs = headers.Split(new[] { "\r\n" }, StringSplitOptions.None);
-
-            foreach (var header in headersAsKeyValuePairs)
-            {
-                var split = header.Split(new[] { ':' });
-                if (split.Length > 1 && !new[] { "HOST", "CONNECTION"}.Contains(split[0].ToUpper().Trim()))
-                    request.SetRawHeader(split[0].Trim(), split[1].Trim());
-            }
+            var request = (HttpWebRequest)WebRequest.Create("http://localhost/TestWithModule/");//"http://localhost:53566/");
+            //var headersAsKeyValuePairs = headers.Split(new[] { "\r\n" }, StringSplitOptions.None);
+            request.SetRawHeader("X-Forwarded-For", header);
+            //foreach (var header in headersAsKeyValuePairs)
+            //{
+            //    var split = header.Split(new[] { ':' });
+            //    if (split.Length > 1 && !new[] { "HOST", "CONNECTION"}.Contains(split[0].ToUpper().Trim()))
+            //        request.SetRawHeader(split[0].Trim(), split[1].Trim());
+            //}
 
             if (IsGet)
             {
